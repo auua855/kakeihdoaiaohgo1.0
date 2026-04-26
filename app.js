@@ -53,6 +53,24 @@ function clearAllData() {
     });
 }
 
+function clearGroupData(groupTitle) {
+    return new Promise((resolve, reject) => {
+        const trans = db.transaction([STORE_NAME], 'readwrite');
+        const store = trans.objectStore(STORE_NAME);
+        const index = store.index('groupTitle');
+        const request = index.openCursor(IDBKeyRange.only(groupTitle));
+        request.onsuccess = (e) => {
+            const cursor = e.target.result;
+            if (cursor) {
+                cursor.delete();
+                cursor.continue();
+            }
+        };
+        trans.oncomplete = () => resolve();
+        trans.onerror = (e) => reject(e);
+    });
+}
+
 // --- CSV行パースユーティリティ ---
 function parseCsvLine(line) {
     const fields = [];
@@ -334,8 +352,9 @@ document.getElementById('cancelImport').addEventListener('click', () => {
 });
 
 document.getElementById('clearData').addEventListener('click', async () => {
-    if (confirm('すべてのデータを消去しますか？')) {
-        await clearAllData();
+    if (!currentGroup) return;
+    if (confirm(`「${currentGroup}」のデータを消去しますか？`)) {
+        await clearGroupData(currentGroup);
         currentGroup = '';
         updateUI();
     }
